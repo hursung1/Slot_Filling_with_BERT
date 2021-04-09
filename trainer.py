@@ -5,21 +5,32 @@ def train(model, dataloader, loss_fn, optim, device, scheduler, n_examples):
     """
     trainer function
     """
-    model = model.train()
+    model.train()
     losses = []
     correct_predictions = 0
     for d in dataloader:
-        input_ids = d['input_ids'].to(device)
+        optim.zero_grad()
+        loss.zero_grad()
+
+        query = d['query'].to(device)
+        bio_label = d['bio'].to(device)
+        domain = d['domains'].to(device)
         attention_mask = d['attention_mask'].to(device)
         targets = d['targets'].to(device)
 
-        outputs = model(input_ids, attention_mask)
-        _, preds = torch.max(outputs, dim=1)
-        loss = loss_fn(outputs, targets)
+        print(query)
+        print(domain)
 
-        optim.zero_grad()
-        optim.step()
-        loss.zero_grad()
+        outputs = model(query, attention_mask)
+        print(outputs)
+        _, preds = torch.max(outputs, dim=1)
+        loss = loss_fn(bio_label, targets)
         loss.backward()
+        losses.append(loss.item())
+
+        correct_predictions += torch.sum(preds == bio_label)
+
+        optim.step()
+        scheduler.step()
     
     return losses

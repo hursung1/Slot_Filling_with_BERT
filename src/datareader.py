@@ -30,15 +30,23 @@ class Vocab():
                 self.word2count[word]+=1
 
 def read_file(filepath, vocab, domain=None):
-    utter_list, y1_list, y2_list = [], [], []
+    domain_utter_list, y1_list, y2_list = [], [], []
+    # domain_utter_list: lists of domain concatenated with tokens of query
+    # y1_list: lists of BIO labels w/o domain
+    # y2_list: lists of BIO labels with domain
+    # dm_list: lists of domain
+    max_length = 0
     with open(filepath, "r") as f:
         for i, line in enumerate(f):
-            line = line.strip()  # text \t label
+            line = line.strip()  # query \t labels
             splits = line.split("\t")
             tokens = splits[0].split()
-            l2_list = splits[1].split()
+            l2_list = splits[1].split() # O DM1-B DM1-I ....
+            if max_length < len(tokens):
+                max_length = len(tokens)
 
-            utter_list.append(tokens)
+            # tokens.insert(0, domain)
+            domain_utter_list.append([domain, tokens])
             y2_list.append(l2_list)
 
             # update vocab
@@ -54,56 +62,24 @@ def read_file(filepath, vocab, domain=None):
                     l1_list.append("O")
             y1_list.append(l1_list)
 
-    data_dict = {"utter": utter_list, "y1": y1_list, "y2": y2_list}
+    data_dict = {"domain_utter": domain_utter_list, "y1": y1_list, "y2": y2_list}
     
-    return data_dict, vocab
+    return data_dict, vocab, max_length
 
-def binarize_data(data, vocab, dm):
-    data_bin = {"utter": [], "y1": [], "y2": [], "domains": []}
-    assert len(data_bin["utter"]) == len(data_bin["y1"]) == len(data_bin["y2"])
-    dm_idx = domain_set.index(dm)
-    for utter_tokens, y1_list, y2_list in zip(data["utter"], data["y1"], data["y2"]):
-        utter_bin, y1_bin, y2_bin = [], [], []
-        # binarize utterence
-        for token in utter_tokens:
-            utter_bin.append(vocab.word2index[token])
-        data_bin["utter"].append(utter_bin)
-        # binarize y1
-        for y1 in y1_list:
-            y1_bin.append(y1_set.index(y1))
-        data_bin["y1"].append(y1_bin)
-        # binarize y2
-        for y2 in y2_list:
-            y2_bin.append(y2_set.index(y2))
-        data_bin["y2"].append(y2_bin)
-        assert len(utter_bin) == len(y1_bin) == len(y2_bin)
-        
-        data_bin["domains"].append(dm_idx)
-    
-    return data_bin
 
 def datareader():
     logger.info("Loading and processing data ...")
 
     data = {"AddToPlaylist": {}, "BookRestaurant": {}, "GetWeather": {}, "PlayMusic": {}, "RateBook": {}, "SearchCreativeWork": {}, "SearchScreeningEvent": {}}
-
+    max_length = {"AddToPlaylist": 0, "BookRestaurant": 0, "GetWeather": 0, "PlayMusic": 0, "RateBook": 0, "SearchCreativeWork": 0, "SearchScreeningEvent": 0}
     # load data and build vocab
     vocab = Vocab()
-    AddToPlaylistData, vocab = read_file("data/snips/AddToPlaylist/AddToPlaylist.txt", vocab, domain="AddToPlaylist")
-    BookRestaurantData, vocab = read_file("data/snips/BookRestaurant/BookRestaurant.txt", vocab, domain="BookRestaurant")
-    GetWeatherData, vocab = read_file("data/snips/GetWeather/GetWeather.txt", vocab, domain="GetWeather")
-    PlayMusicData, vocab = read_file("data/snips/PlayMusic/PlayMusic.txt", vocab, domain="PlayMusic")
-    RateBookData, vocab = read_file("data/snips/RateBook/RateBook.txt", vocab, domain="RateBook")
-    SearchCreativeWorkData, vocab = read_file("data/snips/SearchCreativeWork/SearchCreativeWork.txt", vocab, domain="SearchCreativeWork")
-    SearchScreeningEventData, vocab = read_file("data/snips/SearchScreeningEvent/SearchScreeningEvent.txt", vocab, domain="SearchScreeningEvent")
+    data["AddToPlaylist"], vocab, max_length['AddToPlaylist'] = read_file("data/AddToPlaylist/AddToPlaylist.txt", vocab, domain="AddToPlaylist")
+    data["BookRestaurant"], vocab, max_length['BookRestaurant'] = read_file("data/BookRestaurant/BookRestaurant.txt", vocab, domain="BookRestaurant")
+    data["GetWeather"], vocab, max_length['GetWeather'] = read_file("data/GetWeather/GetWeather.txt", vocab, domain="GetWeather")
+    data["PlayMusic"], vocab, max_length['PlayMusic'] = read_file("data/PlayMusic/PlayMusic.txt", vocab, domain="PlayMusic")
+    data["RateBook"], vocab, max_length['RateBook'] = read_file("data/RateBook/RateBook.txt", vocab, domain="RateBook")
+    data["SearchCreativeWork"], vocab, max_length['SearchCreativeWork'] = read_file("data/SearchCreativeWork/SearchCreativeWork.txt", vocab, domain="SearchCreativeWork")
+    data["SearchScreeningEvent"], vocab, max_length['SearchScreeningEvent'] = read_file("data/SearchScreeningEvent/SearchScreeningEvent.txt", vocab, domain="SearchScreeningEvent")
 
-    # binarize data
-    data["AddToPlaylist"] = binarize_data(AddToPlaylistData, vocab, "AddToPlaylist")
-    data["BookRestaurant"] = binarize_data(BookRestaurantData, vocab, "BookRestaurant")
-    data["GetWeather"] = binarize_data(GetWeatherData, vocab, "GetWeather")
-    data["PlayMusic"] = binarize_data(PlayMusicData, vocab, "PlayMusic")
-    data["RateBook"] = binarize_data(RateBookData, vocab, "RateBook")
-    data["SearchCreativeWork"] = binarize_data(SearchCreativeWorkData, vocab, "SearchCreativeWork")
-    data["SearchScreeningEvent"] = binarize_data(SearchScreeningEventData, vocab, "SearchScreeningEvent")
-    
-    return data, vocab
+    return data, vocab, max(max_length.values()) 
