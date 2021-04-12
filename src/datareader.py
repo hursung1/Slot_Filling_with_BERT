@@ -30,7 +30,7 @@ class Vocab():
                 self.word2count[word]+=1
 
 def read_file(filepath, vocab, domain=None):
-    domain_utter_list, y1_list, y2_list = [], [], []
+    domain_list, domain_utter_list, y1_list, y2_list = [], [], [], []
     # domain_utter_list: lists of domain concatenated with tokens of query
     # y1_list: lists of BIO labels w/o domain
     # y2_list: lists of BIO labels with domain
@@ -39,14 +39,16 @@ def read_file(filepath, vocab, domain=None):
     with open(filepath, "r") as f:
         for i, line in enumerate(f):
             line = line.strip()  # query \t labels
-            splits = line.split("\t")
+            splits = line.split("\t") # split query and labels
+            query = splits[0]
             tokens = splits[0].split()
             l2_list = splits[1].split() # O DM1-B DM1-I ....
             if max_length < len(tokens):
                 max_length = len(tokens)
 
             # tokens.insert(0, domain)
-            domain_utter_list.append([domain, tokens])
+            domain_list.append(domain)
+            domain_utter_list.append(query)
             y2_list.append(l2_list)
 
             # update vocab
@@ -62,7 +64,7 @@ def read_file(filepath, vocab, domain=None):
                     l1_list.append("O")
             y1_list.append(l1_list)
 
-    data_dict = {"domain_utter": domain_utter_list, "y1": y1_list, "y2": y2_list}
+    data_dict = {"domain": domain_list, "domain_utter": domain_utter_list, "y1": y1_list, "y2": y2_list}
     
     return data_dict, vocab, max_length
 
@@ -82,4 +84,4 @@ def datareader():
     data["SearchCreativeWork"], vocab, max_length['SearchCreativeWork'] = read_file("data/SearchCreativeWork/SearchCreativeWork.txt", vocab, domain="SearchCreativeWork")
     data["SearchScreeningEvent"], vocab, max_length['SearchScreeningEvent'] = read_file("data/SearchScreeningEvent/SearchScreeningEvent.txt", vocab, domain="SearchScreeningEvent")
 
-    return data, vocab, max(max_length.values()) 
+    return data, vocab, max(max_length.values())
