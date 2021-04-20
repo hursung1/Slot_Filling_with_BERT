@@ -167,7 +167,7 @@ def f1_score(preds, targets):
             if pred[i] == 1 or pred[i] == 2:
                 if target[i] == pred[i]: # true positive: predicted as right answer, and label is also right answer
                     TP += 1
-                else: # false positive: predicted as right, but wrong answer
+                else: # false positive: predicted as right, but actually wrong answer
                     FP += 1
 
             if target[i] == 1 or target[i] == 2:

@@ -8,7 +8,7 @@ import random
 from datetime import timedelta
 
 import numpy as np
-from tqdm import tqdm
+import matplotlib.pyplot as plt
 import pickle
 
 def init_experiment(params, logger_filename):
@@ -170,3 +170,17 @@ def load_embedding_from_pkl(emb_file):
         embedding = pickle.load(f)
 
     return embedding
+
+
+def save_plot(title, xlabel, ylabel, file_path, data_y, data_x = None, dpi=500):
+    plt.figure()
+    if data_x is not None:
+        plt.plot(data_x, data_y)
+    else:
+        plt.plot(data_y)
+
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.savefig(file_path, dpi=dpi)
+    plt.close()
