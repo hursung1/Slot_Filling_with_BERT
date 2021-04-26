@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 # import transformers
 from transformers import AutoTokenizer, AutoModelForTokenClassification, AdamW, get_linear_schedule_with_warmup
 from transformers import pipeline, BertModel, BertTokenizer, BertConfig
-from transformers.utils.dummy_pt_objects import BertForTokenClassification, PretrainedBartModel
+from transformers.utils.dummy_pt_objects import BertForTokenClassification
 
 from src.utils import save_plot
 from src.dataloader import get_dataloader
@@ -24,18 +24,18 @@ def main(params):
     if params.use_plain:
         tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         model = BertModel.from_pretrained('bert-base-uncased')
-        logfile_dir_path = f'./out_log/Plain/{params.tgt_dm}/Sample{params.n_samples}/Epoch{params.epoch}/'
-        figure_dir_path = f'./output_fig/Plain/{params.tgt_dm}/Sample{params.n_samples}/Epoch{params.epoch}/'
-        bert_model_save_path = f'./experiments/Bert/Plain/{params.tgt_dm}/Sample{params.n_samples}/Epoch{params.epoch}/'
-        tagger_model_save_path = f'./experiments/Tagger/Plain/{params.tgt_dm}/Sample{params.n_samples}/Epoch{params.epoch}/'
+        logfile_dir_path = f'./out_log/Plain/{params.tgt_dm}/Sample{params.n_samples}/'
+        figure_dir_path = f'./output_fig/Plain/{params.tgt_dm}/Sample{params.n_samples}/'
+        bert_model_save_path = f'./experiments/Bert/Plain/{params.tgt_dm}/Sample{params.n_samples}/'
+        tagger_model_save_path = f'./experiments/Tagger/Plain/{params.tgt_dm}/Sample{params.n_samples}/'
 
     else:
         tokenizer = AutoTokenizer.from_pretrained('dslim/bert-base-NER')
         model = AutoModelForTokenClassification.from_pretrained('dslim/bert-base-NER')
-        logfile_dir_path = f'./out_log/NER_Pretrained/{params.tgt_dm}/Sample{params.n_samples}/Epoch{params.epoch}/'
-        figure_dir_path = f'./output_fig/NER_Pretrained/{params.tgt_dm}/Sample{params.n_samples}/Epoch{params.epoch}/'
-        bert_model_save_path = f'./experiments/Bert/NER_Pretrained/{params.tgt_dm}/Sample{params.n_samples}/Epoch{params.epoch}/'
-        tagger_model_save_path = f'./experiments/Tagger/NER_Pretrained/{params.tgt_dm}/Sample{params.n_samples}/Epoch{params.epoch}/'
+        logfile_dir_path = f'./out_log/NER_Pretrained/{params.tgt_dm}/Sample{params.n_samples}/'
+        figure_dir_path = f'./output_fig/NER_Pretrained/{params.tgt_dm}/Sample{params.n_samples}/'
+        bert_model_save_path = f'./experiments/Bert/NER_Pretrained/{params.tgt_dm}/Sample{params.n_samples}/'
+        tagger_model_save_path = f'./experiments/Tagger/NER_Pretrained/{params.tgt_dm}/Sample{params.n_samples}/'
 
     BIOTagger = TripletTagger(model.config.hidden_size)
     if cuda_available:
@@ -60,9 +60,9 @@ def main(params):
     os.makedirs(bert_model_save_path, exist_ok=True)
     os.makedirs(tagger_model_save_path, exist_ok=True)
     
-    logfile = open(logfile_dir_path + f'logfile_{params.tgt_dm}_sample{params.n_samples}_epoch{params.epoch}.txt', 'w')
-    print(f'Target Domain: {params.tgt_dm}\tN Samples: {params.n_samples}\tEpochs: {params.epoch}')
-    logfile.write(f'Target Domain: {params.tgt_dm}\tN Samples: {params.n_samples}\tEpochs: {params.epoch}\n')
+    logfile = open(logfile_dir_path + f'logfile_{params.tgt_dm}_sample{params.n_samples}.txt', 'w')
+    print(f'Target Domain: {params.tgt_dm}\tN Samples: {params.n_samples}')
+    logfile.write(f'Target Domain: {params.tgt_dm}\tN Samples: {params.n_samples}\n')
 
     train_loss_list = []
     val_loss_list = []
@@ -71,12 +71,14 @@ def main(params):
     val_f1_list = []
     xlabel = [i for i in range(1, params.epoch + 1)]
     max_val_f1 = 0
+    best_model_counter = 0
+    e = 0
     
     val_losses, val_acc, val_f1 = eval(model, BIOTagger, tokenizer, dataloader_val, cuda_available, False)
     print(f"Before Training\nVal Loss {sum(val_losses)/len(val_losses):.3f}\tVal Accuracy {val_acc:.3f}\tF1 Score {val_f1}")
     logfile.write(f"Before Training\nVal Loss {sum(val_losses)/len(val_losses):.3f}\tVal Accuracy {val_acc:.3f}\tF1 Score {val_f1}\n")
 
-    for e in range(params.epoch):
+    while best_model_counter < 5:
         print(f"Training... EPOCH {e+1}")
         tr_losses, tr_acc = train(model, BIOTagger, dataloader_tr, optim, cuda_available, scheduler)
         
@@ -87,11 +89,16 @@ def main(params):
         logfile.write(f'EPOCH {e+1}\tVal Loss {sum(val_losses)/len(val_losses):.3f}\tVal Accuracy {val_acc:.3f}\tF1 Score {val_f1}\n')
 
         # save model which shows best validation f1 score
+        best_model_counter += 1
+        e += 1
         if val_f1 > max_val_f1:
+            print("Found Better Model!")
+            logfile.write("Found Better Model!\n")
             tokenizer.save_pretrained(bert_model_save_path)
             model.module.save_pretrained(bert_model_save_path)
             torch.save(BIOTagger.state_dict(), tagger_model_save_path+'state_dict_model.pt')
             max_val_f1 = val_f1
+            best_model_counter = 0
 
         train_loss_list.extend(tr_losses)
         val_loss_list.extend(val_losses)
@@ -140,14 +147,14 @@ def test(params):
         cuda_available = True
 
     if params.use_plain:
-        bert_model_save_path = f'./experiments/Bert/Plain/{params.tgt_dm}/Sample{params.n_samples}/Epoch{params.epoch}/'
-        tagger_model_save_path = f'./experiments/Tagger/Plain/{params.tgt_dm}/Sample{params.n_samples}/Epoch{params.epoch}/state_dict_model.pt'
+        bert_model_save_path = f'./experiments/Bert/Plain/{params.tgt_dm}/Sample{params.n_samples}/'
+        tagger_model_save_path = f'./experiments/Tagger/Plain/{params.tgt_dm}/Sample{params.n_samples}/state_dict_model.pt'
         tokenizer = BertTokenizer.from_pretrained(bert_model_save_path)
         model = BertModel.from_pretrained(bert_model_save_path)
 
     else:
-        bert_model_save_path = f'./experiments/Bert/NER_Pretrained/{params.tgt_dm}/Sample{params.n_samples}/Epoch{params.epoch}/'
-        tagger_model_save_path = f'./experiments/Tagger/NER_Pretrained/{params.tgt_dm}/Sample{params.n_samples}/Epoch{params.epoch}/state_dict_model.pt'
+        bert_model_save_path = f'./experiments/Bert/NER_Pretrained/{params.tgt_dm}/Sample{params.n_samples}/'
+        tagger_model_save_path = f'./experiments/Tagger/NER_Pretrained/{params.tgt_dm}/Sample{params.n_samples}/state_dict_model.pt'
         tokenizer = AutoTokenizer.from_pretrained(bert_model_save_path)
         model = AutoModelForTokenClassification.from_pretrained(bert_model_save_path)
         

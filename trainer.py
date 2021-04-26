@@ -64,7 +64,8 @@ def eval(model, tagger, tokenizer, dataloader, device, is_test=False):
     total = 0
     correct = 0
     with torch.no_grad():
-        for (query, attention_mask, targets) in dataloader:
+        pbar = tqdm(dataloader, total=len(dataloader))
+        for (query, attention_mask, targets) in pbar:
             if device:
                 query = query.cuda()
                 attention_mask = attention_mask.cuda()
@@ -79,8 +80,8 @@ def eval(model, tagger, tokenizer, dataloader, device, is_test=False):
             total += query.shape[0] * query.shape[1]
             correct += (pred == targets).sum().detach().cpu().item()
 
-            total_preds.append(pred.flatten().tolist())
-            total_targets.append(targets.flatten().tolist())
+            total_preds.extend(pred.tolist())
+            total_targets.extend(targets.tolist())
         
         rand = torch.randint(query.size()[0], (1,)).item()
         decoded = tokenizer.decode(query[rand])

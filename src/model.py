@@ -19,6 +19,7 @@ class TripletTagger(nn.Module):
             lengths: lengths of x (bsz, )
             y: label of slot value (bsz, seq_len)
         Ouput:
+            prediction: logits of predictions
             crf_loss: loss of crf
         """
         prediction = self.linear(inputs)
@@ -29,7 +30,7 @@ class TripletTagger(nn.Module):
     def crf_decode(self, logits):
         """
         crf decode
-        0/1/2 --> O/B/I
+        logits to labeling (0/1/2 == O/B/I)
         Input:
             logits: (bsz, max_seq_len, num_entity)
         Output:

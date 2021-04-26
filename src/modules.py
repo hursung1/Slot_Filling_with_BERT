@@ -161,20 +161,53 @@ def f1_score(preds, targets):
     '''
     assert type(preds) is list and type(targets) is list
     TP, FN, FP = 0, 0, 0
-    for pred, target in zip(preds, targets):
-        assert len(pred) == len(target)
+    for pred, true in zip(preds, targets):
+        assert len(pred) == len(true)
+        stpt = 0
+        endpt = 0
+        entity_flag = False
+        neg_flag = False
+        pred.append(0)
+        true.append(0)
+
+        # 1. find True Positive and False Negative
         for i in range(len(pred)):
-            if pred[i] == 1 or pred[i] == 2:
-                if target[i] == pred[i]: # true positive: predicted as right answer, and label is also right answer
-                    TP += 1
-                else: # false positive: predicted as right, but actually wrong answer
-                    FP += 1
+            if true[i] != 0 and not entity_flag:
+                stpt = i
+                entity_flag = True
 
-            if target[i] == 1 or target[i] == 2:
-                if pred[i] != target[i]: # false negative: predicted as wrong, but actually it is right
+            if true[i] == 0 and entity_flag:
+                endpt = i
+                for comp_ind in range(stpt-1, endpt+1):
+                    if true[comp_ind] != pred[comp_ind]:
+                        neg_flag = True
+                        break
+                
+                if neg_flag:
                     FN += 1
+                else:
+                    TP += 1
+                entity_flag = False
+                neg_flag = False
+            
+        # 2. find False Positive
+        for i in range(len(pred)):
+            if pred[i] == 1 and not entity_flag:
+                stpt = i
+                entity_flag = True
 
-
+            if pred[i] == 0 and entity_flag:
+                endpt = i
+                for comp_ind in range(stpt-1, endpt+1):
+                    if true[comp_ind] != pred[comp_ind]:
+                        neg_flag = True
+                        break
+                
+                if neg_flag:
+                    FP += 1
+                entity_flag = False
+                neg_flag = False
+                
     precision = TP/(TP + FP)
     recall = TP/(TP + FN)
     f1 = (2*precision*recall) / (precision + recall)
