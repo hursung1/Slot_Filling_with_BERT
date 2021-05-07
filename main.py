@@ -75,8 +75,8 @@ def main(params):
     e = 0
     
     val_losses, val_acc, val_f1 = eval(model, BIOTagger, tokenizer, dataloader_val, cuda_available, False)
-    print(f"Before Training\nVal Loss {sum(val_losses)/len(val_losses):.3f}\tVal Accuracy {val_acc:.3f}\tF1 Score {val_f1}")
-    logfile.write(f"Before Training\nVal Loss {sum(val_losses)/len(val_losses):.3f}\tVal Accuracy {val_acc:.3f}\tF1 Score {val_f1}\n")
+    print(f"Before Training\nVal Loss {sum(val_losses)/len(val_losses):.4f}\tVal Accuracy {val_acc:.4f}\tF1 Score {val_f1:.4f}")
+    logfile.write(f"Before Training\nVal Loss {sum(val_losses)/len(val_losses):.4f}\tVal Accuracy {val_acc:.4f}\tF1 Score {val_f1:.4f}\n")
 
     while best_model_counter < 5:
         print(f"Training... EPOCH {e+1}")
@@ -85,8 +85,8 @@ def main(params):
         print(f"Validation... EPOCH {e+1}")
         val_losses, val_acc, val_f1 = eval(model, BIOTagger, tokenizer, dataloader_val, cuda_available, False)
         
-        print(f'EPOCH {e+1}\tVal Loss {sum(val_losses)/len(val_losses):.3f}\tVal Accuracy {val_acc:.3f}\tF1 Score {val_f1}')
-        logfile.write(f'EPOCH {e+1}\tVal Loss {sum(val_losses)/len(val_losses):.3f}\tVal Accuracy {val_acc:.3f}\tF1 Score {val_f1}\n')
+        print(f'EPOCH {e+1}\tVal Loss {sum(val_losses)/len(val_losses):.4f}\tVal Accuracy {val_acc:.4f}\tF1 Score {val_f1:.4f}')
+        logfile.write(f'EPOCH {e+1}\tVal Loss {sum(val_losses)/len(val_losses):.4f}\tVal Accuracy {val_acc:.4f}\tF1 Score {val_f1:.4f}\n')
 
         # save model which shows best validation f1 score
         best_model_counter += 1
@@ -125,16 +125,14 @@ def main(params):
         'epoch',
         'accuracy',
         figure_dir_path + f'{params.tgt_dm}_{params.n_samples}_valacc.png',
-        val_acc_list,
-        xlabel
+        val_acc_list
     )
     save_plot(
         'Validation Set F1-Score',
         'epoch',
         'f1-score',
         figure_dir_path + f'{params.tgt_dm}_{params.n_samples}_valf1.png',
-        val_f1_list,
-        xlabel
+        val_f1_list
     )
 
     logfile.close()
@@ -170,7 +168,7 @@ def test(params):
     test_losses, test_acc, test_f1 = eval(model, BIOTagger, tokenizer, dataloader_test, cuda_available, True)
     avg_test_loss = sum(test_losses)/len(test_losses)
 
-    print(f"Test\nLoss: {avg_test_loss:.3f}\tAccuracy: {test_acc:.3f}\tF1 Score: {test_f1:.3f}")
+    print(f"Test\nLoss: {avg_test_loss:.4f}\tAccuracy: {test_acc:.4f}\tF1 Score: {test_f1:.4f}")
     
 
 if __name__=="__main__":

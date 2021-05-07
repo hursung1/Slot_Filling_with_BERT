@@ -35,7 +35,7 @@ def train(model, tagger, dataloader, optim, device, scheduler):
         optim.step()
         scheduler.step()
 
-        pbar.set_description(f"LOSS: {losses[-1]:.3f} ACC: {correct/total:.3f}")
+        pbar.set_description(f"LOSS: {losses[-1]:.4f} ACC: {correct/total:.4f}")
         acc_list.append(correct/total)
 
         del query
@@ -47,7 +47,7 @@ def train(model, tagger, dataloader, optim, device, scheduler):
     return losses, avg_acc
 
 
-def eval(model, tagger, tokenizer, dataloader, device, is_test=False):
+def eval(model, tagger, tokenizer, dataloader, device, is_test=False, file=None):
     """
     evalutation function for validation dataset and test dataset
     
@@ -82,13 +82,18 @@ def eval(model, tagger, tokenizer, dataloader, device, is_test=False):
 
             total_preds.extend(pred.tolist())
             total_targets.extend(targets.tolist())
-        
-        rand = torch.randint(query.size()[0], (1,)).item()
-        decoded = tokenizer.decode(query[rand])
 
-        print("Query     : ", decoded)
-        print("Answer    : ", targets[rand])
-        print("Prediction: ", pred[rand])
+            # file.write(tokenizer.decode(query))
+            if file is not None:
+                file.write(str(targets))
+                file.write(str(pred))
+        
+        # rand = torch.randint(query.size()[0], (1,)).item()
+        # decoded = tokenizer.decode(query[rand])
+
+        # print("Query     : ", decoded)
+        # print("Answer    : ", targets[rand])
+        # print("Prediction: ", pred[rand])
         
         f1 = f1_score(total_preds, total_targets)
         torch.cuda.empty_cache()

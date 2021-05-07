@@ -10,7 +10,7 @@ def get_params():
     parser.add_argument("--exp_id", type=str, default="1", help="Experiment id")
 
     # adaptation parameters
-    parser.add_argument("--epoch", type=int, default=300, help="number of maximum epoch")
+    parser.add_argument("--epoch", type=int, default=10, help="number of maximum epoch")
     parser.add_argument("--tgt_dm", type=str, default="", help="target_domain")
     parser.add_argument("--batch_size", type=int, default=32, help="batch size")
     parser.add_argument("--num_binslot", type=int, default=3, help="number of binary slot O,B,I")

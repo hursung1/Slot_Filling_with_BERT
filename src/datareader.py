@@ -1,7 +1,6 @@
 
-from preprocess.gen_embeddings_for_slu import slot_list
+from preprocess.gen_embeddings_for_slu import domain2slot
 import time
-import random
 # import logging
 
 
@@ -16,12 +15,11 @@ PAD_INDEX = 0
 UNK_INDEX = 1
 
 def read_file(filepath, domain=None):
-    seed = time.time()
     domain_list, label_list, utter_list, y_list = [], [], [], []
     '''
     domain_list: lists of domain
     label_list: lists of label
-    utter_list: lists of labels concatenated with tokens of query
+    utter_list: lists of query
     y1_list: lists of BIO labels w/o labels
     '''
     max_length = 0
@@ -36,28 +34,27 @@ def read_file(filepath, domain=None):
                 max_length = len(tokens)
 
             # for each label, make B/I/O labeled target 
-            BIO_with_label_dict = {}            
+            BIO_with_slot_dict = {}
             for i, l in enumerate(l2_list):
                 if "B" in l:
-                    tag, label = l.split('-')
-                    BIO_with_label_dict[label] = ["O" for _ in range(len(l2_list))]
-                    BIO_with_label_dict[label][i] = tag
+                    tag, slot = l.split('-')
+                    BIO_with_slot_dict[slot] = ["O" for _ in range(len(l2_list))]
+                    BIO_with_slot_dict[slot][i] = tag
                 elif "I" in l:
-                    tag, label = l.split('-')
-                    BIO_with_label_dict[label][i] = tag
+                    tag, slot = l.split('-')
+                    BIO_with_slot_dict[slot][i] = tag
+            
+            for slot in domain2slot[domain]:
+                if slot not in BIO_with_slot_dict: # some slots may not be in utterance: just add list of "O"s
+                    BIO_with_slot_dict[slot] = ["O" for _ in range(len(l2_list))]
 
-            utter_label_list = list(BIO_with_label_dict.keys())
-            BIO_list = list(BIO_with_label_dict.values())
+            slot_list = list(BIO_with_slot_dict.keys())
+            BIO_list = list(BIO_with_slot_dict.values())
 
-            domain_list.extend([domain for _ in range(len(utter_label_list))])
-            utter_list.extend([utter for _ in range(len(utter_label_list))])
-            label_list.extend(utter_label_list)
+            domain_list.extend([domain for _ in range(len(slot_list))])
+            utter_list.extend([utter for _ in range(len(slot_list))])
+            label_list.extend(slot_list)
             y_list.extend(BIO_list)
-
-    random.Random(seed).shuffle(domain_list)
-    random.Random(seed).shuffle(label_list)
-    random.Random(seed).shuffle(utter_list)
-    random.Random(seed).shuffle(y_list)
     
     data_dict = {"domain": domain_list, "label": label_list, "utter": utter_list, "y": y_list}
     return data_dict, max_length
@@ -76,6 +73,7 @@ def data_binarize(data):
         data_bin['y'].append(y_bin)
 
     return data_bin
+
 
 def datareader():
     # logger.info("Loading and processing data ...")

@@ -1,10 +1,7 @@
-from src.datareader import datareader, PAD_INDEX
+from src.datareader import datareader, PAD_INDEX, domain2slot
 import torch
 import torch.utils.data as data
 from torch.utils.data import DataLoader
-# import logging
-
-# logger = logging.getLogger()
 
 class Dataset(data.Dataset):
     def __init__(self, domain, label, X, y, max_len, tokenizer):
@@ -55,7 +52,6 @@ def pad_tensor(dim0, dim1, tensor, front_pad=None):
 
         padded_tensor[i, front:front+vector_len] = torch.LongTensor(vector)
 
-    # print("{}\t{}\t{}".format(length, y_len, padded_y.shape))
     return padded_tensor
 
 
@@ -66,17 +62,13 @@ def collate_fn(data):
 
     """
     query, attention_mask, y, sep_appear = [],[],[],[]
-    # query, attention_mask, y1, y2, sep_appear, sentence_range = [],[],[],[],[],[]
     for d in data:
         query.append(d['input_ids'])
         attention_mask.append(d['attention_mask'])
         y.append(d['bio_tag'])
         sep_appear.append((d['input_ids'] == 102).nonzero(as_tuple=True)[0][0])
-        # sentence_range.append((d['input_ids'] == 102).nonzero(as_tuple=True)[0])
 
-    # print(query, attention_mask, y1, y2)
-    # print(query[1].shape, len(y1[1]))
-    lengths = [len(q) for q in query] # length of query, attention mask is same
+    lengths = [len(q) for q in query] # length of query, same with attention mask
     max_len = max(lengths)
 
     padded_query = pad_tensor(len(query), max_len, query)
@@ -98,37 +90,42 @@ def get_dataloader(tgt_domain, batch_size, n_samples, tokenizer):
 
     val_data = {"domain": [], "label": [], "utter": [], "y": []}
     test_data = {"domain": [], "label": [], "utter": [], "y": []}
+
+    num_tgt_slots = len(domain2slot[tgt_domain])
+    val_split = 500*num_tgt_slots # validation: 500 utterances
+    train_split = n_samples * num_tgt_slots
+    
     if n_samples == 0:
         # first 500 samples as validation set
-        val_data["domain"] = all_data[tgt_domain]["domain"][:500]  
-        val_data["label"] = all_data[tgt_domain]["label"][:500]
-        val_data["utter"] = all_data[tgt_domain]["utter"][:500]
-        val_data["y"] = all_data[tgt_domain]["y"][:500]
+        val_data["domain"] = all_data[tgt_domain]["domain"][:val_split]  
+        val_data["label"] = all_data[tgt_domain]["label"][:val_split]
+        val_data["utter"] = all_data[tgt_domain]["utter"][:val_split]
+        val_data["y"] = all_data[tgt_domain]["y"][:val_split]
 
         # the rest as test set
-        test_data["domain"] = all_data[tgt_domain]["domain"][500:]    
-        test_data["label"] = all_data[tgt_domain]["label"][500:]
-        test_data["utter"] = all_data[tgt_domain]["utter"][500:]
-        test_data["y"] = all_data[tgt_domain]["y"][500:]
+        test_data["domain"] = all_data[tgt_domain]["domain"][val_split:]    
+        test_data["label"] = all_data[tgt_domain]["label"][val_split:]
+        test_data["utter"] = all_data[tgt_domain]["utter"][val_split:]
+        test_data["y"] = all_data[tgt_domain]["y"][val_split:]
 
     else:
         # first n samples as train set
-        train_data["domain"].extend(all_data[tgt_domain]["domain"][:n_samples])
-        train_data["label"].extend(all_data[tgt_domain]["label"][:n_samples])
-        train_data["utter"].extend(all_data[tgt_domain]["utter"][:n_samples])
-        train_data["y"].extend(all_data[tgt_domain]["y"][:n_samples])
+        train_data["domain"].extend(all_data[tgt_domain]["domain"][:train_split])
+        train_data["label"].extend(all_data[tgt_domain]["label"][:train_split])
+        train_data["utter"].extend(all_data[tgt_domain]["utter"][:train_split])
+        train_data["y"].extend(all_data[tgt_domain]["y"][:train_split])
 
         # from n to 500 samples as validation set
-        val_data["domain"] = all_data[tgt_domain]["domain"][n_samples:500]  
-        val_data["label"] = all_data[tgt_domain]["label"][n_samples:500]
-        val_data["utter"] = all_data[tgt_domain]["utter"][n_samples:500]
-        val_data["y"] = all_data[tgt_domain]["y"][n_samples:500]
+        val_data["domain"] = all_data[tgt_domain]["domain"][train_split:val_split]  
+        val_data["label"] = all_data[tgt_domain]["label"][train_split:val_split]
+        val_data["utter"] = all_data[tgt_domain]["utter"][train_split:val_split]
+        val_data["y"] = all_data[tgt_domain]["y"][train_split:val_split]
 
         # the rest as test set (same as zero-shot)
-        test_data["domain"] = all_data[tgt_domain]["domain"][500:]
-        test_data["label"] = all_data[tgt_domain]["label"][500:]
-        test_data["utter"] = all_data[tgt_domain]["utter"][500:]
-        test_data["y"] = all_data[tgt_domain]["y"][500:]
+        test_data["domain"] = all_data[tgt_domain]["domain"][val_split:]
+        test_data["label"] = all_data[tgt_domain]["label"][val_split:]
+        test_data["utter"] = all_data[tgt_domain]["utter"][val_split:]
+        test_data["y"] = all_data[tgt_domain]["y"][val_split:]
 
     dataset_tr = Dataset(train_data["domain"], train_data["label"], train_data["utter"], train_data["y"], max_length, tokenizer)
     dataset_val = Dataset(val_data["domain"], val_data["label"], val_data["utter"], val_data["y"], max_length, tokenizer)

@@ -210,6 +210,6 @@ def f1_score(preds, targets):
                 
     precision = TP/(TP + FP)
     recall = TP/(TP + FN)
-    f1 = (2*precision*recall) / (precision + recall)
+    f1 = (2*precision*recall) / (precision + recall) if precision != 0 or recall != 0 else 0
 
     return f1
